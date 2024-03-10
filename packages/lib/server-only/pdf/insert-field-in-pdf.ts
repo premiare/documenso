@@ -35,7 +35,7 @@ export const insertFieldInPDF = async (pdf: PDFDocument, field: FieldWithSignatu
 
   const { width: pageWidth, height: pageHeight } = page.getSize();
 
-  let dyanmicPageWidth = pageWidth;
+  let dynamicPageWidth = pageWidth;
   let dynamicPageHeight = pageHeight;
 
   const rotationAngle = page.getRotation();
@@ -43,16 +43,16 @@ export const insertFieldInPDF = async (pdf: PDFDocument, field: FieldWithSignatu
   const isLandscape = rotationAngle.angle === 90 || rotationAngle.angle === 270;
 
   if (isLandscape) {
-    dyanmicPageWidth = pageHeight;
+    dynamicPageWidth = pageHeight;
     dynamicPageHeight = pageWidth;
   }
 
-  const fieldWidth = dyanmicPageWidth * (Number(field.width) / 100);
+  const fieldWidth = dynamicPageWidth * (Number(field.width) / 100);
   const fieldHeight = dynamicPageHeight * (Number(field.height) / 100);
 
-  const fieldX = dyanmicPageWidth * (Number(field.positionX) / 100);
+  const fieldX = dynamicPageWidth * (Number(field.positionX) / 100);
   const fieldY = dynamicPageHeight * (Number(field.positionY) / 100);
-  console.log({ isLandscape, dyanmicPageWidth, dynamicPageHeight, fieldX, fieldY });
+
   const font = await pdf.embedFont(isSignatureField ? fontCaveat : StandardFonts.Helvetica);
 
   if (field.type === FieldType.SIGNATURE || field.type === FieldType.FREE_SIGNATURE) {
@@ -76,26 +76,22 @@ export const insertFieldInPDF = async (pdf: PDFDocument, field: FieldWithSignatu
     let imageX = fieldX + (fieldWidth - imageWidth) / 2;
     let imageY = fieldY + (fieldHeight - imageHeight) / 2;
 
+    // Adjust imageY for bottom-left origin of PDFs
+    imageY = dynamicPageHeight - imageY - imageHeight;
+
     if (isLandscape) {
-      if (rotationAngle.angle === 90) {
-        // For 90 degrees, the image's bottom-left corner shifts. You might need to adjust like so:
-        imageX = fieldX + (fieldWidth + imageHeight) / 2; // Adjust based on image height because it's rotated
-        imageY = dynamicPageHeight - fieldY - (fieldHeight + imageWidth) / 2;
-      } else if (rotationAngle.angle === 270) {
-        // For 270 degrees, a similar adjustment, but considering the rotation's effect:
-        imageX = fieldX - (fieldWidth - imageHeight) / 2; // Adjust based on the image height because it's rotated
-        imageY = fieldY - (fieldHeight - imageWidth) / 2;
-      }
-      // Adjust imageY for bottom-left origin of PDFs
-      imageY = dynamicPageHeight - imageY - imageHeight;
-    } else {
-      // Your existing logic here for non-rotated or 180 degrees rotated cases
-      imageY = dynamicPageHeight - imageY - imageHeight;
+      imageX = dynamicPageWidth - imageX - imageWidth;
     }
 
+    // Consoles for dev - remove before merge
+    console.log({ isLandscape });
+    console.log({ dynamicPageWidth, dynamicPageHeight });
+    console.log({ fieldX, fieldY });
+    console.log({ imageX, imageY });
+
     page.drawImage(image, {
-      x: 300,
-      y: 250,
+      x: imageX,
+      y: imageY,
       width: imageWidth,
       height: imageHeight,
       rotate: rotationAngle,
